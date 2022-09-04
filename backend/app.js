@@ -5,19 +5,24 @@ const path = require('path');
 // var logger = require('morgan');
 const connectDB = require('./db')
 const cors = require('cors');
+var session = require('express-session')
 const port = 3001
 
-
+const app = express();
 
 //Connecting To Database
 const con = connectDB();
 
 //Variables to keep state info about who is logged in
-var email_in_use = "";
-var password_in_use = "";
-var who = "";
+// var email_in_use = "";
+// var password_in_use = "";
+// var who = "";
+app.use(session({
+  secret: 'keyboard cat',
+  resave: false,
+  saveUninitialized: true
+}))
 
-const app = express();
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -73,9 +78,13 @@ app.get('/makeAccount', (req, res) => {
   con.query(sql_statement, function (error, results, fields) {
     if (error) throw error;
     else {
-      email_in_use = email;
-      password_in_use = password;
-      who = "pat";
+      req.session.email_in_use = email;
+      req.session.password_in_use = password;
+      req.session.who = "pat";
+      req.session.save(function (err) {
+        if (err) return next(err)
+        // res.redirect('/')
+      })
       return res.json({
         data: results
       })
@@ -142,9 +151,13 @@ app.get('/makeDocAccount', (req, res) => {
       con.query(sql_statement, function (error) {
         if (error) throw error;
       })
-      email_in_use = email;
-      password_in_use = password;
-      who = 'doc';
+      req.session.email_in_use = email;
+      req.session.password_in_use = password;
+      req.session.who = 'doc';
+      req.session.save(function (err) {
+        if (err) return next(err)
+        // res.redirect('/')
+      })
       return res.json({
         data: results
       })
@@ -171,9 +184,13 @@ app.get('/checklogin', (req, res) => {
       } else {
         var string = JSON.stringify(results);
         var json = JSON.parse(string);
-        email_in_use = email;
-        password_in_use = password;
-        who = "pat";
+        req.session.email_in_use = email;
+        req.session.password_in_use = password;
+        req.session.who = "pat";
+        req.session.save(function (err) {
+          if (err) return next(err)
+          // res.redirect('/')
+        })
       }
       return res.json({
         data: results
@@ -201,11 +218,15 @@ app.get('/checkDoclogin', (req, res) => {
       } else {
         var string = JSON.stringify(results);
         var json = JSON.parse(string);
-        email_in_use = json[0].email;
-        password_in_use = json[0].password;
-        who = "doc";
-        console.log(email_in_use);
-        console.log(password_in_use);
+        req.session.email_in_use = json[0].email;
+        req.session.password_in_use = json[0].password;
+        req.session.who = "doc";
+        req.session.save(function (err) {
+          if (err) return next(err)
+          // res.redirect('/')
+        })
+        console.log(req.session.email_in_use);
+        console.log(req.session.password_in_use);
       }
       return res.json({
         data: results
@@ -258,14 +279,27 @@ app.post('/resetPasswordDoctor', (req, res) => {
 
 //Returns Who is Logged in
 app.get('/userInSession', (req, res) => {
-  return res.json({ email: `${email_in_use}`, who: `${who}` });
+  return res.json({
+    email: `${req.session.email_in_use === undefined ? "" : req.session.email_in_use}`,
+    who: `${req.session.who === undefined ? "" : req.session.who}`
+  });
 });
 
 //Logs the person out
 app.get('/endSession', (req, res) => {
   console.log("Ending session");
-  email_in_use = "";
-  password_in_use = "";
+  req.session.email_in_use = null;
+  req.session.password_in_use = null;
+  req.session.save(function (err) {
+    if (err) next(err)
+
+    // regenerate the session, which is good practice to help
+    // guard against forms of session fixation
+    req.session.regenerate(function (err) {
+      if (err) next(err)
+      res.redirect('/')
+    })
+  })
 });
 
 //Appointment Related
@@ -394,7 +428,7 @@ app.get('/MedHistView', (req, res) => {
                     email FROM Patient,PatientsFillHistory
                     WHERE Patient.email = PatientsFillHistory.patient
                     AND Patient.email IN (SELECT patient from PatientsAttendAppointments 
-                    NATURAL JOIN Diagnose WHERE doctor="${email_in_use}")`;
+                    NATURAL JOIN Diagnose WHERE doctor="${req.session.email_in_use}")`;
   if (patientName != "''")
     statement += " AND Patient.name LIKE " + patientName
   console.log(statement)
@@ -562,7 +596,7 @@ app.get('/doctorViewAppt', (req, res) => {
   let statement = `SELECT a.id,a.date, a.starttime, a.status, p.name, psa.concerns, psa.symptoms
   FROM Appointment a, PatientsAttendAppointments psa, Patient p
   WHERE a.id = psa.appt AND psa.patient = p.email
-  AND a.id IN (SELECT appt FROM Diagnose WHERE doctor="${email_in_use}")`;
+  AND a.id IN (SELECT appt FROM Diagnose WHERE doctor="${req.session.email_in_use}")`;
   console.log(statement);
   con.query(statement, function (error, results, fields) {
     if (error) throw error;
@@ -625,7 +659,7 @@ app.get('/deleteAppt', (req, res) => {
         });
       }
       else {
-        if (who == "pat") {
+        if (req.session.who == "pat") {
           statement = `DELETE FROM PatientsAttendAppointments p WHERE p.appt = ${uid}`;
           console.log(statement);
           con.query(statement, function (error, results, fields) {
