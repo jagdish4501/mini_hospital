@@ -1,10 +1,15 @@
 # Hosital-Management-System-DBMS
-<b>Link</b> : https://github.com/jagdish4501/mini_hospital.git
-<b>
-<b>Link</b> : https://github.com/hrishikeshathalye/Hospital-Management-System-DBMS
+<b>Link : </b>  https://github.com/jagdish4501/mini_hospital.git
+<b>Our Contribution :</b>
+    1. fixing the issues related to user session handling
+    2. fixing the sql penetration problem
+    3. organizing code in folder structure so that maintaining code and updating features become easier
+
+
+<b>Link : </b>  https://github.com/hrishikeshathalye/Hospital-Management-System-DBMS
 
 <pre>
-Name: Hrishikesh Athalye
+Name: Hrishikesh Athalye ,jagdish Kumar
 MIS: 111803154
 Class : TY Comp Div 2
 </pre>
