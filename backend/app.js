@@ -4,14 +4,16 @@ const path = require('path');
 //Logger that was used for debugging, commented later
 // var logger = require('morgan');
 const connectDB = require('./db')
+//Connecting To Database
+const con = connectDB();
 const cors = require('cors');
-var session = require('express-session')
+var session = require('express-session');
+const { route } = require('./Route/checkIfPatientExists');
 const port = 3001
 
 const app = express();
 
-//Connecting To Database
-const con = connectDB();
+
 
 //Variables to keep state info about who is logged in
 // var email_in_use = "";
@@ -35,333 +37,29 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 
 //Signup, Login, Password Reset Related Queries
-
-//Checks if patient exists in database
-app.get('/checkIfPatientExists', (req, res) => {
-  let params = req.query;
-  let email = params.email;
-  let statement = `SELECT * FROM Patient WHERE email = "${email}"`;
-  console.log(statement);
-  con.query(statement, function (error, results, fields) {
-    if (error) throw error;
-    else {
-      return res.json({
-        data: results
-      })
-    };
-  });
-});
-
+app.use('/checkIfPatientExists', require('./Route/checkIfPatientExists'));
 //Creates User Account
-app.get('/makeAccount', (req, res) => {
-  let query = req.query;
-  let name = query.name + " " + query.lastname;
-  let email = query.email;
-  let password = query.password;
-  let address = query.address;
-  let gender = query.gender;
-  let medications = query.medications;
-  let conditions = query.conditions;
-  let surgeries = query.surgeries;
-  if (medications === undefined) {
-    medications = "none"
-  }
-  if (conditions === undefined) {
-    conditions = "none"
-  }
-  if (!surgeries === undefined) {
-    surgeries = "none"
-  }
-  let sql_statement = `INSERT INTO Patient (email, password, name, address, gender) 
-                       VALUES ` + `("${email}", "${password}", "${name}", "${address}", "${gender}")`;
-  console.log(sql_statement);
-  con.query(sql_statement, function (error, results, fields) {
-    if (error) throw error;
-    else {
-      req.session.email_in_use = email;
-      req.session.password_in_use = password;
-      req.session.who = "pat";
-      req.session.save(function (err) {
-        if (err) return next(err)
-        // res.redirect('/')
-      })
-      return res.json({
-        data: results
-      })
-    };
-  });
-  sql_statement = 'SELECT id FROM MedicalHistory ORDER BY id DESC LIMIT 1;';
-  console.log(sql_statement)
-  con.query(sql_statement, function (error, results, fields) {
-    if (error) throw error;
-    else {
-      let generated_id = results[0].id + 1;
-      let sql_statement = `INSERT INTO MedicalHistory (id, date, conditions, surgeries, medication) 
-      VALUES ` + `("${generated_id}", curdate(), "${conditions}", "${surgeries}", "${medications}")`;
-      console.log(sql_statement);
-      con.query(sql_statement, function (error, results, fields) {
-        if (error) throw error;
-        else {
-          let sql_statement = `INSERT INTO PatientsFillHistory (patient, history) 
-          VALUES ` + `("${email}",${generated_id})`;
-          console.log(sql_statement);
-          con.query(sql_statement, function (error, results, fields) {
-            if (error) throw error;
-            else { };
-          });
-        };
-      });
-    };
-  });
-});
-
+app.use('/makeAccount', require('./Route/makeAccount'))
 //Checks If Doctor Exists
-app.get('/checkIfDocExists', (req, res) => {
-  let params = req.query;
-  let email = params.email;
-  let statement = `SELECT * FROM Doctor WHERE email = "${email}"`;
-  console.log(statement);
-  con.query(statement, function (error, results, fields) {
-    if (error) throw error;
-    else {
-      return res.json({
-        data: results
-      })
-    };
-  });
-});
-
+app.use('/checkIfDocExists', require('./Route/checkIfDocExists'))
 //Makes Doctor Account
-app.get('/makeDocAccount', (req, res) => {
-  let params = req.query;
-  let name = params.name + " " + params.lastname;
-  let email = params.email;
-  let password = params.password;
-  let gender = params.gender;
-  let schedule = params.schedule;
-  let sql_statement = `INSERT INTO Doctor (email, gender, password, name) 
-                       VALUES ` + `("${email}", "${gender}", "${password}", "${name}")`;
-  console.log(sql_statement);
-  con.query(sql_statement, function (error, results, fields) {
-    if (error) throw error;
-    else {
-      let sql_statement = `INSERT INTO DocsHaveSchedules (sched, doctor) 
-                       VALUES ` + `(${schedule}, "${email}")`;
-      console.log(sql_statement);
-      con.query(sql_statement, function (error) {
-        if (error) throw error;
-      })
-      req.session.email_in_use = email;
-      req.session.password_in_use = password;
-      req.session.who = 'doc';
-      req.session.save(function (err) {
-        if (err) return next(err)
-        // res.redirect('/')
-      })
-      return res.json({
-        data: results
-      })
-    };
-  });
-});
-
+app.use('/makeDocAccount', require('./Route/makeDocAccount'))
 //Checks if patient is logged in
-app.get('/checklogin', (req, res) => {
-  let params = req.query;
-  let email = params.email;
-  let password = params.password;
-  let sql_statement = `SELECT * FROM Patient 
-                       WHERE email="${email}" 
-                       AND password="${password}"`;
-  console.log(sql_statement);
-  con.query(sql_statement, function (error, results, fields) {
-    if (error) {
-      console.log("error");
-      return res.status(500).json({ failed: 'error ocurred' })
-    }
-    else {
-      if (results.length === 0) {
-      } else {
-        var string = JSON.stringify(results);
-        var json = JSON.parse(string);
-        req.session.email_in_use = email;
-        req.session.password_in_use = password;
-        req.session.who = "pat";
-        req.session.save(function (err) {
-          if (err) return next(err)
-          // res.redirect('/')
-        })
-      }
-      return res.json({
-        data: results
-      })
-    };
-  });
-});
-
+app.use('/checklogin', require('./Route/checklogin'))
 //Checks if doctor is logged in
-app.get('/checkDoclogin', (req, res) => {
-  let params = req.query;
-  let email = params.email;
-  let password = params.password;
-  let sql_statement = `SELECT * 
-                       FROM Doctor
-                       WHERE email="${email}" AND password="${password}"`;
-  console.log(sql_statement);
-  con.query(sql_statement, function (error, results, fields) {
-    if (error) {
-      console.log("eror");
-      return res.status(500).json({ failed: 'error ocurred' })
-    }
-    else {
-      if (results.length === 0) {
-      } else {
-        var string = JSON.stringify(results);
-        var json = JSON.parse(string);
-        req.session.email_in_use = json[0].email;
-        req.session.password_in_use = json[0].password;
-        req.session.who = "doc";
-        req.session.save(function (err) {
-          if (err) return next(err)
-          // res.redirect('/')
-        })
-        console.log(req.session.email_in_use);
-        console.log(req.session.password_in_use);
-      }
-      return res.json({
-        data: results
-      })
-    };
-  });
-});
-
+app.use('/checkDoclogin', require('./Route/checkDoclogin'))
 //Resets Patient Password
-app.post('/resetPasswordPatient', (req, res) => {
-  let something = req.query;
-  let email = something.email;
-  let oldPassword = "" + something.oldPassword;
-  let newPassword = "" + something.newPassword;
-  let statement = `UPDATE Patient 
-                   SET password = "${newPassword}" 
-                   WHERE email = "${email}" 
-                   AND password = "${oldPassword}";`;
-  console.log(statement);
-  con.query(statement, function (error, results, fields) {
-    if (error) throw error;
-    else {
-      return res.json({
-        data: results
-      })
-    };
-  });
-});
-
+app.use('/resetPasswordPatient', require('./Route/resetPasswordPatient'))
 //Resets Doctor Password
-app.post('/resetPasswordDoctor', (req, res) => {
-  let something = req.query;
-  let email = something.email;
-  let oldPassword = "" + something.oldPassword;
-  let newPassword = "" + something.newPassword;
-  let statement = `UPDATE Doctor
-                   SET password = "${newPassword}" 
-                   WHERE email = "${email}" 
-                   AND password = "${oldPassword}";`;
-  console.log(statement);
-  con.query(statement, function (error, results, fields) {
-    if (error) throw error;
-    else {
-      return res.json({
-        data: results
-      })
-    };
-  });
-});
-
+app.use('/resetPasswordDoctor', require('./Route/resetPasswordDoctor'))
 //Returns Who is Logged in
-app.get('/userInSession', (req, res) => {
-  return res.json({
-    email: `${req.session.email_in_use === undefined ? "" : req.session.email_in_use}`,
-    who: `${req.session.who === undefined ? "" : req.session.who}`
-  });
-});
-
+app.use('/userInSession', require('./Route/userInSession'))
 //Logs the person out
-app.get('/endSession', (req, res) => {
-  console.log("Ending session");
-  req.session.email_in_use = null;
-  req.session.password_in_use = null;
-  req.session.save(function (err) {
-    if (err) next(err)
-
-    // regenerate the session, which is good practice to help
-    // guard against forms of session fixation
-    req.session.regenerate(function (err) {
-      if (err) next(err)
-      res.redirect('/')
-    })
-  })
-});
-
+app.use('/endSession', require('./Route/endSession'))
 //Appointment Related
 
 //Checks If a similar appointment exists to avoid a clash
-app.get('/checkIfApptExists', (req, res) => {
-  let cond1, cond2, cond3 = ""
-  let params = req.query;
-  let email = params.email;
-  let doc_email = params.docEmail;
-  let startTime = params.startTime;
-  let date = params.date;
-  let ndate = new Date(date).toLocaleDateString().substring(0, 10)
-  let sql_date = `STR_TO_DATE('${ndate}', '%d/%m/%Y')`;
-  //sql to turn string to sql time obj
-  let sql_start = `CONVERT('${startTime}', TIME)`;
-  let statement = `SELECT * FROM PatientsAttendAppointments, Appointment  
-  WHERE patient = "${email}" AND
-  appt = id AND
-  date = ${sql_date} AND
-  starttime = ${sql_start}`
-  console.log(statement)
-  con.query(statement, function (error, results, fields) {
-    if (error) throw error;
-    else {
-      cond1 = results;
-      statement = `SELECT * FROM Diagnose d INNER JOIN Appointment a 
-      ON d.appt=a.id WHERE doctor="${doc_email}" AND date=${sql_date} AND status="NotDone" 
-      AND ${sql_start} >= starttime AND ${sql_start} < endtime`
-      console.log(statement)
-      con.query(statement, function (error, results, fields) {
-        if (error) throw error;
-        else {
-          cond2 = results;
-          statement = `SELECT doctor, starttime, endtime, breaktime, day FROM DocsHaveSchedules 
-          INNER JOIN Schedule ON DocsHaveSchedules.sched=Schedule.id
-          WHERE doctor="${doc_email}" AND 
-          day=DAYNAME(${sql_date}) AND 
-          (DATE_ADD(${sql_start},INTERVAL +1 HOUR) <= breaktime OR ${sql_start} >= DATE_ADD(breaktime,INTERVAL +1 HOUR));`
-          //not in doctor schedule
-          console.log(statement)
-          con.query(statement, function (error, results, fields) {
-            if (error) throw error;
-            else {
-              if (results.length) {
-                results = []
-              }
-              else {
-                results = [1]
-              }
-              return res.json({
-                data: cond1.concat(cond2, results)
-              })
-            };
-          });
-        };
-      });
-    };
-  });
-  //doctor has appointment at the same time - Your start time has to be greater than all prev end times
-});
-
+app.use('/checkIfApptExists', require('./Route/checkIfApptExists'))
 //Returns Date/Time of Appointment
 app.get('/getDateTimeOfAppt', (req, res) => {
   let tmp = req.query;
