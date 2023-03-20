@@ -9,8 +9,7 @@
 <b>Link : </b>  https://github.com/hrishikeshathalye/Hospital-Management-System-DBMS
 
 <pre>
-Name: Hrishikesh Athalye ,jagdish Kumar
-MIS: 111803154
+
 Class : TY Comp Div 2
 </pre>
 
