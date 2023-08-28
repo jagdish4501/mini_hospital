@@ -1,31 +1,41 @@
-CREATE DATABASE HMS;
-USE HMS;
-CREATE TABLE Patient(
-    email varchar(50) PRIMARY KEY,
-    password varchar(30) NOT NULL,
-    name varchar(50) NOT NULL,
-    address varchar(60) NOT NULL,
+CREATE TABLE Patient (
+    email VARCHAR(50) PRIMARY KEY,
+    password VARCHAR(30) NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    address VARCHAR(60) NOT NULL,
     gender VARCHAR(20) NOT NULL
 );
-CREATE TABLE Doctor(
-    email varchar(50) PRIMARY KEY,
-    gender varchar(20) NOT NULL,
-    password varchar(30) NOT NULL,
-    name varchar(50) NOT NULL
+
+CREATE TABLE Doctor (
+    email VARCHAR(50) PRIMARY KEY,
+    gender VARCHAR(20) NOT NULL,
+    password VARCHAR(30) NOT NULL,
+    name VARCHAR(50) NOT NULL
 );
+
+CREATE TABLE Slot (
+    email VARCHAR(50),
+    Slot_no INT NOT NULL,
+    date DATE NOT NULL,
+    isBooked INT NOT NULL,
+    PRIMARY KEY (email, Slot_no, date)
+);
+
+CREATE TABLE Appointment (
+    email VARCHAR(50) PRIMARY KEY,
+    doc_email VARCHAR(50),
+    Slot_no INT NOT NULL,
+    date DATE NOT NULL,
+    symptoms VARCHAR(500) NOT NULL,
+    FOREIGN KEY (doc_email, Slot_no, date) REFERENCES Slot (email, Slot_no, date)
+);
+
 CREATE TABLE MedicalHistory(
-    id int PRIMARY KEY,
-    date DATE NOT NULL,
-    conditions VARCHAR(100) NOT NULL,
-    surgeries VARCHAR(100) NOT NULL,
-    medication VARCHAR(100) NOT NULL
-);
-CREATE TABLE Appointment(
-    id int PRIMARY KEY,
-    date DATE NOT NULL,
-    starttime TIME NOT NULL,
-    endtime TIME NOT NULL,
-    status varchar(15) NOT NULL
+    email varchar(50) PRIMARY KEY,
+    doc_email varchar(50) PRIMARY KEY,
+    Slot_no int NOT NULL,
+    symptoms varchar(500) NOT NULL,
+    diagnosis varchar(500) NOT NULL
 );
 CREATE TABLE PatientsAttendAppointments(
     patient varchar(50) NOT NULL,

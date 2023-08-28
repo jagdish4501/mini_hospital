@@ -10,7 +10,6 @@ const cors = require('cors');
 var session = require('express-session');
 const { route } = require('./Route/checkIfPatientExists');
 const port = 3001
-
 const app = express();
 
 
